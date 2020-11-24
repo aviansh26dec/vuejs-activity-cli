@@ -7,65 +7,32 @@
         </div>
       </div>
     </nav>
-    <nav class="navbar is-white">
-      <div class="container">
-        <div class="navbar-menu">
-          <div class="navbar-start">
-            <a class="navbar-item is-active" href="#">Newest</a>
-            <a class="navbar-item" href="#">In Progress</a>
-            <a class="navbar-item" href="#">Finished</a>
-          </div>
-        </div>
-      </div>
-    </nav>
+    
+    <NavBar />
     <section class="container">
       <div class="columns">
         <div class="column is-3">
-          <a v-if="!isFormDisplayed" @click="toggleFormDisplay" class="button is-primary is-block is-alt is-large" href="#">New Activity</a>
-          <div v-if="isFormDisplayed" class="create-form">
-            <h2>Create Activity</h2>
-            <form>
-              <div class="field">
-                <label class="label">Title</label>
-                <div class="control">
-                  <input v-model="newActivity.title" class="input" type="text" placeholder="Read a Book">
-                </div>
-              </div>
-              <div class="field">
-                <label class="label">Notes</label>
-                <div class="control">
-                  <textarea v-model="newActivity.notes" class="textarea" placeholder="Write some notes here" />
-                </div>
-              </div>
-              <div class="field is-grouped">
-                <div class="control">
-                  <button 
-                    :disabled="!isFormValid"
-                    @click="createActivity" 
-                    class="button is-link"
-                  >
-                    Create Activity
-                  </button>
-                </div>
-                <div class="control">
-                  <button 
-                    @click="toggleFormDisplay" 
-                    class="button is-text"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
+          <ActivityCreate @activity-created="addActivity" :categories="categories" />
         </div>
         <div class="column is-9">
-          <div class="box content">
-            <ActivityItem v-for="act in activities" 
+          <div class="box content" :class="{fetching: isFetching, 'has-error': isError}">
+            <div v-if="isError">
+              {{ isError }}
+            </div>
+            <div v-else>
+              <div v-if="isFetching">
+                Loading.....
+              </div>
+              <div v-else>
+                <ActivityItem v-for="act in activities" 
                           :act="act"
                           :key="act.id"
                           :ctime="convertTime(act.createdAt)"
-            />
+                />
+                <div class="activity-length">Currently {{ activitiesLength }} activities.</div>
+                <div class="activity-motivation">{{ activityMotivation }}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -75,41 +42,48 @@
 
 <script>
 import ActivityItem from '@/components/ActivityItem';
-import { fetchActivities } from '@/api';
+import ActivityCreate from '@/components/ActivityCreate';
+import NavBar from '@/components/NavBar';
+import { fetchActivities, fetchCategories } from '@/api';
 
 export default {
   name: 'App',
   components: {
-    ActivityItem
+    ActivityItem,
+    ActivityCreate,
+    NavBar
   },
   data() {
     return {
-          isFormDisplayed: false,
           creator: 'Filip John',
           appName: 'Activity Planner',
           watchAppName: 'Activity Planner by Avinash Singh',
-          newActivity: {
-            title: '',
-            notes: ''
-          },
           items: {1: {name: 'Filip'}, 2: {name: 'John'}},
           user: {
             name: 'Filip Jerga',
             id: '-Aj34jknvncx98812',
           },
+          isFetching: false,
+          isError: null,
           activities: {},
-          categories: {
-            '1546969049': {text: 'books'},
-            '1546969225': {text: 'movies'}
-          }
+          categories: {}
         }
   },
   computed: {
-    isFormValid(){
-      return this.newActivity.title && this.newActivity.notes;
-    },
     fullAppName(){
       return this.appName + ' by ' + this.creator;
+    },
+    activitiesLength(){
+      return Object.keys(this.activities).length;
+    },
+    activityMotivation(){
+      if(this.activitiesLength && this.activitiesLength < 5){
+        return 'Nice to see some goals (:';
+      }else if(this.activitiesLength >= 5){
+        return 'So many activites! Good Job!';
+      }else{
+        return 'No activites, so sad :(';
+      }
     }
   },
   watch: {
@@ -124,21 +98,32 @@ export default {
     console.log('beforeCreate called!');
   },
   created(){
-    this.activities = fetchActivities();
+    this.isFetching = true;
+    fetchActivities().then(({...activities}) => {
+      this.activities = activities;
+      this.isFetching = false;
+    }).catch((err) => {
+      this.isError = err;
+      this.isFetching = false;
+    });
+    this.categories = fetchCategories();
+  },
+  updated(){
+    // console.log(this.activities, 'activities')
   },
   methods: {
-    toggleFormDisplay () {
-      this.isFormDisplayed = !this.isFormDisplayed
-    },
-    createActivity () {
-      console.log(this.newActivity)
-    },
     convertTime (time) {
       var date1 = new Date(time);
       var date2 = new Date();
       const diffTime = Math.abs(date2 - date1);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
       return diffDays + ' days';
+    },
+    addActivity (newActivity) {
+      this.activities[newActivity.id] = newActivity;
+      // Vue.set
+      // Vue.set(this.activities, newActivity.id, newActivity);
+      // console.log(newActivity, 'newActivity');
     }
   }
 }
@@ -158,11 +143,21 @@ html,body {
 footer {
   background-color: #F2F6FA !important;
 }
-
+.activity-length {
+  display: inline-block;
+}
+.activity-motivation {
+  float: right;
+}
 .example-wrapper {
   margin-left: 30px;
 }
-
+.fetching{
+  border: 2px solid orange;
+}
+.has-error{
+  border: 2px solid red;
+}
 .topNav {
   border-top: 5px solid #3498DB;
 }

@@ -15,6 +15,7 @@
           <ActivityCreate @activity-created="addActivity" :categories="categories" />
         </div>
         <div class="column is-9">
+          <Calendar />
           <div class="box content" :class="{fetching: isFetching, 'has-error': isError}">
             <div v-if="isError">
               {{ isError }}
@@ -44,6 +45,7 @@
 import ActivityItem from '@/components/ActivityItem';
 import ActivityCreate from '@/components/ActivityCreate';
 import NavBar from '@/components/NavBar';
+import Calendar from '@/components/Calendar';
 import { fetchActivities, fetchCategories } from '@/api';
 
 export default {
@@ -51,7 +53,8 @@ export default {
   components: {
     ActivityItem,
     ActivityCreate,
-    NavBar
+    NavBar,
+    Calendar
   },
   data() {
     return {
